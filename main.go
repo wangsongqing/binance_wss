@@ -1,34 +1,25 @@
 package main
 
 import (
-	BinanceConfig "binance/config"
+	"binance/app/controllers"
+	"binance/bootstrap"
 	btsConfig "binance/config"
 	"binance/pkg/config"
-	"binance/pkg/curl"
-	BinanceHmac "binance/pkg/hash"
-	"binance/pkg/helpers"
-	"binance/pkg/websocket"
-	"bytes"
-	"encoding/json"
 	"flag"
 	"fmt"
-	"strconv"
-	_ "strings"
-	"time"
 )
 
-type auth struct {
-	Timestamp string `json: timestamp`
-	Signature string `json: signature`
-}
+
 
 func init() {
 	// 加载 config 目录下的配置信息
 	btsConfig.Initialize()
 }
 
-// go run main.go
+// go run main.go -controllerName="xxxxx"
 func main() {
+
+	controllerName := flag.String("controllerName", "", "")
 
 	// 配置初始化，依赖命令行 --env 参数
 	var env string
@@ -36,30 +27,23 @@ func main() {
 	flag.Parse()
 	config.InitConfig(env)
 
-	listenKeyUrl := BinanceConfig.GetListKeyUrl("/fapi/v1/listenKey")
+	flag.Parse()
 
-	apiSecret := helpers.String2Bytes(helpers.FmtStrFromInterface(config.Env("API_SECRET")))
+	// 初始化 Redis
+	bootstrap.SetupRedis()
 
-	signature := BinanceHmac.SetSignature(apiSecret, []byte(""))
-	timestamp := time.Now().UnixNano() / 1e6
-	s := strconv.FormatInt(timestamp, 10)
-
-	var data auth
-	data.Timestamp = s
-	data.Signature = signature
-	bs, _ := json.Marshal(data)
-
-	reader := bytes.NewReader(bs)
-
-	header := map[string]string{
-		"X-MBX-APIKEY": helpers.FmtStrFromInterface(config.Env("API_KEY")),
+	switch *controllerName {
+		case "xmwme":
+			controllers.Run("xmwme")
+			break
+		case "free":
+			controllers.Run("free")
+		break
+		default:
+			fmt.Printf("没有找到控制器: %s, 运行项目方式: go run main.go -controllerName=\"xxxxx\"", *controllerName)
+		break
 	}
 
-	body := curl.POST(listenKeyUrl, reader, header)
-	listenKey := helpers.JsonToMap(body)
 
-
-	socketUrl := fmt.Sprintf("wss://fstream.binance.com/ws/%s", listenKey["listenKey"])
-	websocket.Client(socketUrl)
 
 }

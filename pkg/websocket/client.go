@@ -1,6 +1,8 @@
 package websocket
 
 import (
+	"binance/pkg/helpers"
+	"binance/pkg/redis"
 	"fmt"
 	"github.com/gorilla/websocket"
 	"log"
@@ -12,7 +14,7 @@ import (
 var done chan interface{}
 var interrupt chan os.Signal
 
-func Client(wss string)  {
+func Client(wss string, account string)  {
 	done = make(chan interface{}) // Channel to indicate that the receiverHandler is done
 	interrupt = make(chan os.Signal) // Channel to listen for interrupt signal to terminate gracefully
 
@@ -31,13 +33,25 @@ func Client(wss string)  {
 			_, message, err := conn.ReadMessage()
 			if err != nil {
 				log.Println("read:", err)
-				//return
+			}
+
+			mapMes := helpers.JsonToMap(message)
+			if _, ok := mapMes["e"]; !ok {
+				fmt.Printf("error:%s \n", mapMes["error"])
+				continue
+			}
+
+			redisKey := redis.GetLpushKeyBinance(account)
+			lPush := redis.Redis.Rpush(redisKey, string(message))
+			if !lPush {
+				fmt.Printf("写入队列失败:%s \n", string(message))
 			}
 			fmt.Printf("wss message:%s \n", string(message))
 		}
 	}()
 
-	ticker := time.NewTicker(time.Second)
+	// 2秒钟发一次心跳
+	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 
 	for {
