@@ -13,7 +13,7 @@ func init() {
 			"port":     config.Env("REDIS_PORT", "6379"),
 			"password": config.Env("REDIS_PASSWORD", ""),
 
-			"database": config.Env("REDIS_MAIN_DB", 1),
+			"database": config.Env("REDIS_MAIN_DB", 0),
 		}
 	})
 }

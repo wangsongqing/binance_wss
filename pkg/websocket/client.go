@@ -14,7 +14,7 @@ import (
 var done chan interface{}
 var interrupt chan os.Signal
 
-func Client(wss string, account string)  {
+func Client(wss string, account string, timestamp int64) bool  {
 	done = make(chan interface{}) // Channel to indicate that the receiverHandler is done
 	interrupt = make(chan os.Signal) // Channel to listen for interrupt signal to terminate gracefully
 
@@ -36,8 +36,16 @@ func Client(wss string, account string)  {
 			}
 
 			mapMes := helpers.JsonToMap(message)
+
+			nowTime := time.Now().Unix()
+			diffTime := nowTime - timestamp
+
+			if diffTime > 3600 {
+				break
+			}
+
 			if _, ok := mapMes["e"]; !ok {
-				fmt.Printf("error:%s \n", mapMes["error"])
+				// fmt.Printf("error:%s \n", mapMes["error"])
 				continue
 			}
 
@@ -57,12 +65,12 @@ func Client(wss string, account string)  {
 	for {
 		select {
 		case <-done:
-			return
+			return false
 		case t := <-ticker.C:
 			err := conn.WriteMessage(websocket.TextMessage, []byte(t.String()))
 			if err != nil {
 				log.Println("write:", err)
-				return
+				return false
 			}
 		case <-interrupt:
 			log.Println("interrupt")
@@ -72,13 +80,15 @@ func Client(wss string, account string)  {
 			err := conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 			if err != nil {
 				log.Println("write close:", err)
-				return
+				return false
 			}
 			select {
 			case <-done:
 			case <-time.After(time.Second):
 			}
-			return
+			return false
 		}
 	}
+
+	return true
 }

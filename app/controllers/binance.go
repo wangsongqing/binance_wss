@@ -20,8 +20,19 @@ type auth struct {
 	Signature string `json: signature`
 }
 
-
 func Run(key string)  {
+	for  {
+		reset := initRun(key)
+		if reset == true {
+			continue
+		}
+
+		fmt.Println("listKey 过期了")
+	}
+}
+
+
+func initRun(key string) bool {
 	listenKeyUrl := BinanceConfig.GetListKeyUrl("/fapi/v1/listenKey")
 
 	apiSecret := helpers.String2Bytes(helpers.FmtStrFromInterface(config.Env(strings.ToUpper(key) + "_SECRET")))
@@ -45,5 +56,7 @@ func Run(key string)  {
 	listenKey := helpers.JsonToMap(body)
 
 	socketUrl := fmt.Sprintf("wss://fstream.binance.com/ws/%s", listenKey["listenKey"])
-	websocket.Client(socketUrl,"xmwme")
+
+	nowTimes := time.Now().Unix()
+	return websocket.Client(socketUrl, key, nowTimes)
 }
