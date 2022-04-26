@@ -19,7 +19,7 @@ func Client(wss string, account string, timestamp int64) bool  {
 	interrupt = make(chan os.Signal) // Channel to listen for interrupt signal to terminate gracefully
 
 	signal.Notify(interrupt, os.Interrupt) // Notify the interrupt channel for SIGINT
-	fmt.Printf("wss url:%s \n", wss)
+	fmt.Printf("wss url:%s, timestamp:%d \n", wss, timestamp)
 
 	conn, _, err := websocket.DefaultDialer.Dial(wss, nil)
 	if err != nil {

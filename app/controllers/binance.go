@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/tidwall/gjson"
 	"strconv"
 	"strings"
 	"time"
@@ -20,8 +21,8 @@ type auth struct {
 	Signature string `json: signature`
 }
 
-func Run(key string)  {
-	for  {
+func Run(key string) {
+	for {
 		reset := initRun(key)
 		if reset == true {
 			continue
@@ -30,7 +31,6 @@ func Run(key string)  {
 		fmt.Println("listKey 过期了")
 	}
 }
-
 
 func initRun(key string) bool {
 	listenKeyUrl := BinanceConfig.GetListKeyUrl("/fapi/v1/listenKey")
@@ -53,9 +53,9 @@ func initRun(key string) bool {
 	}
 
 	body := curl.POST(listenKeyUrl, reader, header)
-	listenKey := helpers.JsonToMap(body)
+	listenKey := gjson.GetBytes(body, "listenKey")
 
-	socketUrl := fmt.Sprintf("wss://fstream.binance.com/ws/%s", listenKey["listenKey"])
+	socketUrl := fmt.Sprintf("wss://fstream.binance.com/ws/%s", listenKey)
 
 	nowTimes := time.Now().Unix()
 	return websocket.Client(socketUrl, key, nowTimes)
